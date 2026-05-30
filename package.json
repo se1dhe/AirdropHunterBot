@@ -2,9 +2,10 @@
   "name": "drop-bot",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "tsx src/index.ts",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
     "generate-signer": "tsx src/generate_signer.ts",
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -13,6 +14,9 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@neynar/nodejs-sdk": "^3.175.0",
     "axios": "^1.16.1",

@@ -1,0 +1,30 @@
+{
+  "name": "drop-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "generate-signer": "tsx src/generate_signer.ts",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@neynar/nodejs-sdk": "^3.175.0",
+    "axios": "^1.16.1",
+    "dotenv": "^17.4.2",
+    "ethers": "^6.16.0",
+    "node-telegram-bot-api": "^0.67.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/node-telegram-bot-api": "^0.64.14",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  }
+}

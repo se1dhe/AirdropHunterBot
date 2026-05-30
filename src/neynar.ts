@@ -1,19 +1,21 @@
 import { NeynarAPIClient } from "@neynar/nodejs-sdk";
 import dotenv from 'dotenv';
-import { getEthAddress } from './wallet.js';
+import { getOptionalEthAddress } from './wallet.js';
 import { sendNotification } from './telegram.js';
 
 dotenv.config();
 
 const apiKey = process.env.NEYNAR_API_KEY || '';
-const signerUuid = process.env.NEYNAR_SIGNER_UUID || '';
 const client = new NeynarAPIClient({ apiKey });
 
-const repliedCasts = new Set<string>();
+const notifiedCasts = new Set<string>();
 
 export const monitorFarcaster = async () => {
-  const keywords = (process.env.SEARCH_KEYWORDS || '').split(',');
-  const ethAddress = getEthAddress();
+  const keywords = (process.env.SEARCH_KEYWORDS || '')
+    .split(',')
+    .map((keyword) => keyword.trim())
+    .filter(Boolean);
+  const ethAddress = getOptionalEthAddress();
   const replyTemplate = process.env.REPLY_MESSAGE || 'Here is my address: {address}';
 
   console.log(`Starting Farcaster monitoring for keywords: ${keywords.join(', ')}`);
@@ -25,18 +27,18 @@ export const monitorFarcaster = async () => {
         const casts = result.result.casts;
 
         for (const cast of casts) {
-          if (repliedCasts.has(cast.hash)) continue;
+          if (notifiedCasts.has(cast.hash)) continue;
 
           // Check if it's a recent cast (e.g., last 10 minutes)
           const castDate = new Date(cast.timestamp);
           const now = new Date();
           const diffMinutes = (now.getTime() - castDate.getTime()) / (1000 * 60);
 
-          if (diffMinutes < 10 && shouldReply(cast)) {
-            await replyToCast(cast, ethAddress, replyTemplate);
+          if (diffMinutes < 10 && shouldNotify(cast)) {
+            await notifyAboutCast(cast, ethAddress, replyTemplate);
           }
-          
-          repliedCasts.add(cast.hash);
+
+          notifiedCasts.add(cast.hash);
         }
       }
     } catch (error) {
@@ -45,35 +47,31 @@ export const monitorFarcaster = async () => {
   }, 60000); // Check every minute
 };
 
-const shouldReply = (cast: any): boolean => {
+const shouldNotify = (cast: any): boolean => {
   const text = cast.text.toLowerCase();
   // Simple heuristic: check if it looks like a "drop your address" post
   return text.includes('drop') || text.includes('wallet') || text.includes('address');
 };
 
-const replyToCast = async (cast: any, address: string, template: string) => {
-  if (!signerUuid) {
-    console.log('No signer UUID, skipping reply to:', cast.hash);
-    return;
-  }
+const notifyAboutCast = async (cast: any, address: string | null, template: string) => {
+  const replyText = address ? template.replace('{address}', address) : null;
+  const castPath = cast.hash.startsWith('0x') ? cast.hash.slice(0, 10) : cast.hash.substring(0, 10);
 
-  const replyText = template.replace('{address}', address);
-  
   try {
-    await client.publishCast({
-      signerUuid,
-      text: replyText,
-      parent: cast.hash
-    });
-    console.log(`Replied to cast ${cast.hash} by @${cast.author.username}`);
-    
-    await sendNotification(
-      `✅ *Replied to Drop*\n` +
+    console.log(`Found drop cast ${cast.hash} by @${cast.author.username}`);
+
+    let message =
+      `🔔 *New Drop Alert*\n` +
       `👤 User: @${cast.author.username}\n` +
-      `📝 Cast: ${cast.text.substring(0, 50)}...\n` +
-      `🔗 [View Cast](https://warpcast.com/${cast.author.username}/${cast.hash.substring(0, 10)})`
-    );
+      `🔎 Keyword: ${cast.text.substring(0, 80)}\n` +
+      `🔗 [View Cast](https://warpcast.com/${cast.author.username}/${castPath})`;
+
+    if (replyText) {
+      message += `\n\n💬 Reply Template:\n\`${replyText}\``;
+    }
+
+    await sendNotification(message);
   } catch (error) {
-    console.error(`Failed to reply to cast ${cast.hash}:`, error);
+    console.error(`Failed to send alert for cast ${cast.hash}:`, error);
   }
 };

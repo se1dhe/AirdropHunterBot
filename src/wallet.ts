@@ -10,3 +10,12 @@ export const getEthAddress = (): string => {
   }
   return address;
 };
+
+export const getOptionalEthAddress = (): string | null => {
+  const address = process.env.ETH_ADDRESS;
+  if (!address) {
+    return null;
+  }
+
+  return ethers.isAddress(address) ? address : null;
+};
